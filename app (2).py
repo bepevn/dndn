@@ -8,7 +8,9 @@ st.set_page_config(page_title="원소 실험실 시뮬레이터", page_icon="�
 
 st.markdown(
     "<style>.block-container{padding:0.5rem 0.5rem 0 0.5rem;max-width:100%}"
-    "header[data-testid='stHeader']{display:none}</style>",
+    "header[data-testid='stHeader'],footer,#MainMenu,[data-testid='stToolbar']{display:none}"
+    "iframe{position:fixed;inset:0;width:100vw!important;height:100vh!important;border:0;z-index:999}"
+    "html,body,[data-testid='stAppViewContainer']{overflow:hidden!important}</style>",
     unsafe_allow_html=True,
 )
 
@@ -178,6 +180,26 @@ details.how[open]{padding-bottom:12px}
 .toast .big{font-size:16px;color:#fff}
 @keyframes tin{from{transform:translateX(120%);opacity:0}}@keyframes tout{to{transform:translateX(120%);opacity:0}}
 #quiz,#over{display:none!important}
+
+#log{display:none!important}
+.flask{position:relative;padding-top:14px}
+#resPop{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);z-index:30;width:300px;pointer-events:none}
+.rp{position:relative;text-align:center;padding:12px 16px;border-radius:16px;background:rgba(14,18,29,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line2);box-shadow:0 18px 40px -12px #000;font-size:13px;line-height:1.55;animation:rpIn .45s cubic-bezier(.2,.9,.3,1.35)}
+.rp.ok{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 0 40px -6px var(--c),0 18px 40px -12px #000}
+.rp .nm{font-size:22px;font-weight:800;letter-spacing:-.02em;color:#fff;text-shadow:0 0 18px var(--c)}
+.rp .eq{font-family:var(--mono);font-size:12.5px;color:#c7d2fe;margin-top:3px}
+.rp .new{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--c);color:#06070b;margin-bottom:4px;animation:pulse 1s infinite alternate}
+.rp .sm{font-size:11.5px;color:var(--mute);margin-top:4px}
+.rp.out{animation:rpOut .35s forwards}
+@keyframes rpIn{from{opacity:0;transform:translateY(16px) scale(.8)}to{opacity:1;transform:none}}
+@keyframes rpOut{to{opacity:0;transform:translateY(-12px) scale(.95)}}
+@keyframes pulse{to{filter:brightness(1.35);transform:scale(1.06)}}
+.ring{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px;border-radius:50%;border:3px solid var(--c);pointer-events:none;animation:ring .9s ease-out forwards;z-index:5}
+@keyframes ring{to{transform:scale(7);opacity:0;border-width:1px}}
+.spk{position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);pointer-events:none;z-index:6;animation:spk .9s ease-out forwards}
+@keyframes spk{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+#beaker.glow{box-shadow:0 0 50px -4px var(--c),inset 0 0 40px -10px var(--c)}
+#autoTip{font-size:11px;color:var(--dim);margin-top:6px}
 </style></head>
 <body>
 <div class="ov" id="menu"><div id="bgel"></div><div class="card">
@@ -256,10 +278,10 @@ details.how[open]{padding-bottom:12px}
  <div class="row">
   <section class="panel"><div class="ph"><h2><span class="n">i</span>원소 정보</h2></div><div id="info"><small>원소에 마우스를 올리면 정보가 보여요.</small></div></section>
   <section class="panel" id="bench"><div class="ph" style="width:100%"><h2><span class="n">02</span>실험대</h2><p>비커 속 원소를 반응시켜 보세요</p></div>
-   <div class="flask"><div id="beaker"><div id="contents">비어 있음</div><div id="liquid"></div><div id="fx"></div></div></div>
+   <div class="flask"><div id="resPop"></div><div id="beaker"><div id="contents">비어 있음</div><div id="liquid"></div><div id="fx"></div></div></div>
    <div class="acts"><button class="pri" onclick="act('mix')"><span>⚗️</span>혼합·점화<small>화합 반응</small></button><button onclick="act('water')"><span>💧</span>물에 넣기<small>물 반응</small></button><button onclick="act('flame')"><span>🔥</span>불꽃 반응<small>불꽃색 관찰</small></button></div>
    <div class="subacts"><button class="ghost" onclick="undoB()">↩ 하나 빼기</button><button class="ghost" onclick="clearB()">🧹 비우기</button><button class="ghost" onclick="hint()">💡 힌트</button><span id="qbtn" style="display:none"></span></div>
-   <div id="log">원소를 골라 실험해 보세요!<br><small>교육용으로 단순화한 시뮬레이션입니다. 실제 반응 조건(온도·촉매 등)은 설명을 참고하고, 위험 반응은 절대 따라 하지 마세요.</small></div>
+   <div id="log"></div><div id="autoTip">✨ 반응이 성공하면 비커가 자동으로 비워져요 · 비커를 클릭하면 바로 비우기</div>
   </section>
   <section class="panel"><div class="ph"><h2><span class="n">03</span>발견 도감</h2></div><div class="btns" id="tabs"></div><div class="bar"><div id="prog"></div></div><div id="disc"></div></section>
  </div>
@@ -658,7 +680,7 @@ for(const r of R){r.p=sub(r.p);
  if(!r.need)console.warn('레시피 없음',r.p);
  const base=r.a+':'+r.k;r.id=seenK[base]?base+'#'+recStr(r.need):base;seenK[base]=1}
 // ---------- UI ----------
-const $=id=>document.getElementById(id);let B=[],found=new Set((()=>{try{return JSON.parse(localStorage.getItem('elab2')||'[]')}catch(e){return[]}})()),safe=100,tab='전체';
+const $=id=>document.getElementById(id);let B=[],found=new Set(JSON.parse(localStorage.getItem('elab2')||'[]')),safe=100,tab='전체';
 const pt=$('pt');
 for(const s of SYM){const e=E[s],[r,c]=pos(e.z),d=document.createElement('div');d.className='el c-'+e.c;d.style.gridRow=r;d.style.gridColumn=c;
  d.innerHTML=`<i>${e.z}</i><b>${s}</b><small>${e.n}</small>`;d.onclick=ev=>{const n=ev&&ev.shiftKey?5:1;for(let i=0;i<n;i++)put(s)};d.onmouseenter=()=>showInfo(s);pt.appendChild(d)}
@@ -670,8 +692,17 @@ function put(s){showInfo(s);if(!B.includes(s)&&new Set(B).size>=4)return log('�
 function tally(){const t={};B.forEach(s=>t[s]=(t[s]||0)+1);return t}
 function undoB(){B.pop();draw()}
 function draw(){const t=tally();$('contents').innerHTML=B.length?Object.keys(t).map(s=>`${s}<sub style="font-size:13px">×${t[s]}</sub>`).join(' + ')+`<div style="font-size:12px;font-weight:normal;opacity:.7">원자 ${B.length}개</div>`:'비어 있음';$('liquid').style.background='#38bdf855';$('liquid').style.height='30%'}
-function clearB(){B=[];draw();log('비커를 비웠어요.')}
-function log(h){$('log').innerHTML=h}
+function clearB(q){B=[];draw();if(!q)log('🧹 비커를 비웠어요.')}
+let rpT=0;
+function pop(h,c,ok){const P=$('resPop');if(!P)return;clearTimeout(rpT);P.innerHTML=`<div class="rp ${ok?'ok':''}" style="--c:${c||'#6d7cff'}">${h}</div>`;
+ rpT=setTimeout(()=>{const d=P.firstChild;if(d&&d.classList){d.classList.add('out');setTimeout(()=>{if(P.firstChild===d)P.innerHTML=''},350)}},ok?3800:2600)}
+function log(h){$('log').innerHTML=h;pop(h)}
+function celebrate(c){const bk=$('beaker'),fl=bk.parentElement;fl.style.setProperty('--c',c);bk.style.setProperty('--c',c);bk.classList.add('glow');setTimeout(()=>bk.classList.remove('glow'),1400);
+ const r=document.createElement('div');r.className='ring';fl.appendChild(r);setTimeout(()=>r.remove(),950);
+ for(let i=0;i<22;i++){const p=document.createElement('div'),a=Math.random()*6.28,d=80+Math.random()*90;p.className='spk';p.style.setProperty('--dx',Math.cos(a)*d+'px');p.style.setProperty('--dy',Math.sin(a)*d+'px');p.style.animationDelay=Math.random()*.15+'s';fl.appendChild(p);setTimeout(()=>p.remove(),1200)}}
+function result(r,isNew,extra){const c=r.col&&r.col[0]=='#'?r.col.slice(0,7):'#34d399';celebrate(c);
+ pop(`${isNew?'<span class="new">NEW · 도감 등록</span><br>':''}<div class="nm">${r.p}</div>${r.eq?`<div class="eq">${r.eq}</div>`:''}${extra||''}<div class="sm">[${r.cat}]${r.cat=='핵·방사성'?' ☢ 실제로는 차폐 시설·허가 필요':''}</div>`,c,true);
+ setTimeout(()=>{B=[];draw()},900)}
 function fx(t,col){const f=$('fx'),bk=$('beaker');
  if(t=='boom'){bk.classList.add('shake');setTimeout(()=>bk.classList.remove('shake'),800)}
  if(t!='bub'){f.style.background=col+'cc';setTimeout(()=>f.style.background='',300)}
@@ -682,24 +713,25 @@ function act(a){if(!B.length)return log('먼저 원소를 넣어주세요.');
  if(a=='flame'){if(new Set(B).size>1)return log('불꽃 반응은 원소 1종으로만 정확히 볼 수 있어요.');const f=FL[B[0]];
   if(!f)return log(`${E[B[0]].n}은(는) 뚜렷한 불꽃색이 없어요.`);
   $('fx').style.background=`radial-gradient(circle at 50% 80%,${f[0]},transparent 70%)`;setTimeout(()=>$('fx').style.background='',1500);
-  const r=R.find(x=>x.a=='flame'&&x.k==B[0]),nw=discover(r);log(`🔥 <b>${E[B[0]].n}</b>의 불꽃색: <b style="color:${f[0]}">${f[1]}</b>${nw?'<br>🎉 새 발견!':''}`);return}
+  const r=R.find(x=>x.a=='flame'&&x.k==B[0]),nw=discover(r);$('log').innerHTML=f[1];if(r)result(Object.assign({},r,{col:f[0]}),nw,`<div class="eq" style="color:${f[0]}">🔥 ${f[1]}</div>`);else pop(`🔥 ${E[B[0]].n}: ${f[1]}`,f[0],true);return}
  const r=R.find(x=>x.a==a&&same(x.need));
  if(!r){const near=R.filter(x=>x.a==a&&x.k==k);if(!near.length&&z>=99)return log('☢ 이 원소는 수명이 너무 짧아 알려진 화합물이 거의 없어요. (아인슈타이늄 산화물 등 극히 일부만 보고됨)');if(near.length)return log(`🤔 원소 종류는 맞았는데 <b>개수</b>가 달라요! 이 원소들로 만들 수 있는 화합물이 <b>${near.length}가지</b> 있어요. 화학식을 떠올리며 개수를 조절해 보세요. (예: H₂O → H 2개 + O 1개)`);if(B.some(s=>E[s].c=='noble'))return log('비활성 기체는 (거의) 반응하지 않아요. 단, 제논은 예외가 있다는데…?');
   if(B.some(s=>['Au','Pt'].includes(s))&&a=='mix')return log('금·백금 같은 귀금속은 산소와 잘 반응하지 않아요. 그래서 오래도록 빛나죠!');
   return log(a=='water'?'물에 넣었지만 눈에 띄는 반응이 없어요.':'반응이 일어나지 않았어요(또는 아직 준비되지 않은 조합). 다른 조합을 시도해 보세요!')}
  fx(r.fx,r.col);$('liquid').style.background=r.col+'99';$('liquid').style.height='55%';
  const isNew=discover(r);
- log(`${isNew?'🎉 <b>새 발견!</b> ':''}<b>${r.p}</b> <small>[${r.cat}]</small><br><code>${r.eq}</code><br>${r.msg}${r.cat=='핵·방사성'?'<br>☢ <small>실제로는 핫셀·차폐 시설과 허가가 필요한 물질이에요.</small>':''}`)}
-function discover(r){const id=r.id,isNew=!found.has(id);if(isNew&&r)setTimeout(()=>toast(r),0);found.add(id);try{localStorage.setItem('elab2',JSON.stringify([...found]))}catch(e){}update();return isNew}
+ $('log').innerHTML=r.msg;result(r,isNew,r.msg?`<div class="sm" style="color:#cbd5e1">${r.msg}</div>`:'')}
+function discover(r){const id=r.id,isNew=!found.has(id);if(isNew&&r)setTimeout(()=>toast(r),0);found.add(id);localStorage.setItem('elab2',JSON.stringify([...found]));update();return isNew}
 function hint(){const left=R.filter(r=>!found.has(r.id));if(!left.length)return log('🏆 모든 반응을 발견했어요!');
  const r=left[Math.floor(Math.random()*left.length)],s=r.k.split(',');log(`💡 힌트: <b>${E[s[0]].n}</b>을(를) 이용한 <b>${r.cat}</b> 실험이 아직 남아 있어요. (${r.a=='water'?'물에 넣기':r.a=='flame'?'불꽃 반응':s.length+'종 혼합'} · 원자 총 ${Object.values(r.need).reduce((a,b)=>a+b,0)}개)`)}
-const cats=['전체',...new Set(R.map(r=>r.cat))];
+const cats=['전체','✅ 발견함',...new Set(R.map(r=>r.cat))];
 $('tabs').innerHTML=cats.map(c=>`<button data-c="${c}">${c}</button>`).join('');
+$('beaker').onclick=()=>{if(B.length)clearB()};$('beaker').style.cursor='pointer';$('beaker').title='클릭하면 비우기';
 $('tabs').onclick=e=>{if(e.target.dataset.c){tab=e.target.dataset.c;update()}};
 function update(){const n=R.filter(r=>found.has(r.id)).length;$('score').textContent=n;$('total').textContent=R.length;$('prog').style.width=n/R.length*100+'%';
  const t=[[0,'견습 연구원'],[10,'초보 화학자'],[30,'숙련 화학자'],[60,'수석 연구원'],[100,'노벨상 후보'],[R.length,'🏆 원소의 지배자']];$('title').textContent=t.filter(x=>n>=x[0]).pop()[1];
  [...$('tabs').children].forEach(b=>b.classList.toggle('on',b.dataset.c==tab));
- $('disc').innerHTML=R.filter(r=>tab=='전체'||r.cat==tab).map(r=>{const ok=found.has(r.id);
+ const L=R.filter(r=>tab=='전체'||(tab=='✅ 발견함'?found.has(r.id):r.cat==tab));$('disc').innerHTML=(L.length?'':'<div class="disc no">아직 발견한 조합이 없어요. 실험해 보세요!</div>')+L.map(r=>{const ok=found.has(r.id);
   return `<div class="disc ${ok?'':'no'}">${ok?'✅ <b>'+r.p+'</b> <small style="color:#93c5fd">['+recStr(r.need)+']</small>'+(r.eq?'<br><small>'+r.eq+'</small>':''):'❓ ??? <small>['+r.cat+']</small>'}</div>`}).join('')}
 update();
 let sessFound=0,expCount=0;
@@ -777,7 +809,7 @@ const AW=880,AH=500,TL=45,DMUL=1.8;
 function mkBall(u,side,i,n){const r=Math.max(20,Math.min(42,14+u.max/7))*(u.fx=='bub'?1.12:1),a=Math.random()*Math.PI*2,v=(u.fx=='boom'?4.6:u.fx=='bub'?3:3.8);
  return Object.assign(u,{side,r,r0:r,x:side?AW-90-Math.random()*60:90+Math.random()*60,y:(AH/(n+1))*(i+1),vx:Math.cos(a)*v*(side?-1:1)*(Math.cos(a)>0?1:-1),vy:Math.sin(a)*v,v0:v,
   cd:2.5+Math.random()*3,spike:0,shield:0,dash:0,slow:0,boost:0,hitT:{},flash:0,dead:false,col:R.find(x=>x.p==u.full)?.col||'#94a3b8'})}
-function startBattle(){if(!sel.length)return alertB('팀에 화합물을 최소 1개 넣어주세요!');
+function startBattle(){if(!sel.length)return alertB('팀에 화합물을 최소 1개 넣어주세요!');efx=null;
  me=sel.map(i=>mkUnit(R[i]));const n=Math.max(1,Math.min(5,me.length+(Math.random()<.3?1:0)));
  en=[];while(en.length<n){const r=R[Math.floor(Math.random()*R.length)],u=mkUnit(r);if(!en.some(e=>e.full==u.full))en.push(u)}
  me.forEach((u,i)=>mkBall(u,0,i,me.length));en.forEach((u,i)=>mkBall(u,1,i,en.length));balls=[...me,...en];parts=[];pops=[];shots=[];bT=0;shake=0;cheerCd=0;running=true;
@@ -833,7 +865,21 @@ function step(dt){if(!running)return;bT+=dt;cheerCd=Math.max(0,cheerCd-dt);const
 function finish(){if(!running)return;running=false;
  if(bT>=TL&&alive(me).length&&alive(en).length){const pm=me.reduce((s,u)=>s+u.hp/u.max,0)/me.length,pe=en.reduce((s,u)=>s+u.hp/u.max,0)/en.length;
   blog(`⏰ 시간 종료! HP 비율 — 내 팀 ${Math.round(pm*100)}% vs 상대 ${Math.round(pe*100)}%`);(pm>=pe?en:me).forEach(u=>u.hp=0)}
- draw2();end()}
+ const won=!alive(en).length;end();endFx(won)}
+let efx=null;
+function endFx(w){efx={t:0,w};const cs=w?['#facc15','#4ade80','#60a5fa','#f472b6','#fff']:['#64748b','#94a3b8'];
+ (w?en:me).forEach(b=>{burst(b.x,b.y,b.col||'#f97316',30,7)});let last=0,n=0;
+ const L=t=>{if(running||!efx)return;const dt=last?Math.min(.05,(t-last)/1000):.016;last=t;efx.t+=dt;const k=dt*60;
+  if(w&&efx.t<2.2&&Math.random()<.35)burst(Math.random()*AW,Math.random()*AH*.6,cs[n++%cs.length],18,6);
+  for(const p of parts){p.x+=p.vx*k;p.y+=p.vy*k;p.vx*=.95;p.vy=p.vy*.95+(w?.04:.02)*k;p.l-=dt*.8}parts=parts.filter(p=>p.l>0);
+  for(const p of pops){p.y-=.6*k;p.l-=dt}pops=pops.filter(p=>p.l>0);shake=Math.max(0,shake-dt*30);
+  draw2();if(efx.t<4)requestAnimationFrame(L)};
+ if(typeof requestAnimationFrame=='function')requestAnimationFrame(L)}
+function banner(g){if(!efx)return;const t=efx.t,a=Math.min(1,t*2.5),sc=1+Math.max(0,.6-t)*1.2;
+ g.save();g.globalAlpha=a*.55;g.fillStyle='#000';g.fillRect(0,0,AW,AH);g.globalAlpha=a;g.translate(AW/2,AH/2);g.scale(sc,sc);
+ g.textAlign='center';g.textBaseline='middle';g.font='900 72px Pretendard,sans-serif';g.shadowColor=efx.w?'#facc15':'#ef4444';g.shadowBlur=30+10*Math.sin(t*6);
+ g.fillStyle=efx.w?'#fde68a':'#fca5a5';g.fillText(efx.w?'VICTORY':'DEFEAT',0,-14);g.shadowBlur=0;g.font='700 22px Pretendard,sans-serif';g.fillStyle='#fff';
+ g.fillText(efx.w?'🏆 승리! BP 획득':'😵 패배… 참가상 +3 BP',0,44);g.restore()}
 function draw2(){const c=$('bc');if(!c||!c.getContext)return;const g=c.getContext('2d');if(!g)return;g.save();g.clearRect(0,0,AW,AH);
  if(shake)g.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
  g.strokeStyle=TH.gr;g.lineWidth=1;for(let x=0;x<AW;x+=40){g.beginPath();g.moveTo(x,0);g.lineTo(x,AH);g.stroke()}for(let y=0;y<AH;y+=40){g.beginPath();g.moveTo(0,y);g.lineTo(AW,y);g.stroke()}
@@ -852,7 +898,7 @@ function draw2(){const c=$('bc');if(!c||!c.getContext)return;const g=c.getContex
   const bw2=b.r*2,f=b.hp/b.max;g.fillStyle='#000a';g.fillRect(b.x-b.r,b.y-b.r-10,bw2,5);g.fillStyle=f<.3?'#ef4444':b.side?'#f87171':'#4ade80';g.fillRect(b.x-b.r,b.y-b.r-10,bw2*f,5);
   const cf=1-Math.max(0,b.cd)/6;g.strokeStyle='#e9d5ff';g.lineWidth=2;g.beginPath();g.arc(b.x,b.y,b.r+2,-1.57,-1.57+6.28*cf);g.stroke()}
  for(const p of pops){g.globalAlpha=Math.min(1,p.l*1.5);g.font=`900 ${p.s}px sans-serif`;g.textAlign='center';g.lineWidth=4;g.strokeStyle='#000';g.strokeText(p.t,p.x,p.y);g.fillStyle=p.c;g.fillText(p.t,p.x,p.y)}
- g.globalAlpha=1;g.restore();
+ g.globalAlpha=1;g.restore();banner(g);
  $('hMe').textContent=`🙂 내 팀 ${alive(me).length}/${me.length}`;$('hEn').textContent=`👾 상대 ${alive(en).length}/${en.length}`;$('hTime').textContent=`⏱ ${Math.max(0,Math.ceil(TL-bT))}초`;
  $('cheerB').textContent=cheerCd>0?`📣 응원 (${Math.ceil(cheerCd)})`:'📣 응원 (가속)'}
 function blog(t){$('blog').innerHTML+=t+'<br>';$('blog').scrollTop=1e9}
@@ -901,4 +947,4 @@ function toast(r){let box=$('toasts');if(!box||!box.appendChild)return;const n=R
 </script></body></html>
 """
 
-components.html(GAME_HTML, height=1500, scrolling=True)
+components.html(GAME_HTML, height=900, scrolling=True)
